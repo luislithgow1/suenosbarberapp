@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Plataforma de gestión de reservas para barberías - Panel del Dueño">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
     <title>BarberApp - Panel del Dueño</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Roboto,sans-serif;background:#f0f2f5;min-height:100vh;padding:20px}.container{max-width:1400px;margin:0 auto}
@@ -63,6 +67,7 @@
         .barberia-info{background:linear-gradient(135deg,#667eea10,#764ba210);padding:15px 20px;border-radius:16px;margin-bottom:20px;border:1px solid #667eea20}.loading{text-align:center;padding:40px;color:#64748b}
         .password-input-group{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.password-input-group input{flex:1;min-width:150px}.password-input-group button{padding:12px 16px;white-space:nowrap}
         .section-title{font-size:18px;font-weight:600;color:#1e293b;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+        .install-banner{display:none;position:fixed;bottom:20px;left:20px;right:20px;background:#0f172a;color:#fff;padding:16px 20px;border-radius:20px;box-shadow:0 8px 25px rgba(0,0,0,0.2);z-index:1000;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;backdrop-filter:blur(10px)}.install-banner.show{display:flex}.install-banner-content{display:flex;align-items:center;gap:12px;flex:1}.install-banner-icon{font-size:32px}.install-banner-text{flex:1}.install-banner-title{font-weight:700;margin-bottom:4px}.install-banner-desc{font-size:12px;opacity:0.9}.install-banner button{background:#667eea;color:#fff;border:none;padding:8px 20px;border-radius:40px;font-weight:600;cursor:pointer}
     </style>
 </head>
 <body>
@@ -129,7 +134,7 @@
             </div>
         </div>
         
-        <!-- Servicios - CORREGIDO -->
+        <!-- Servicios -->
         <div id="tab-servicios" class="tab-panel">
             <div class="sub-tabs">
                 <button class="sub-tab-btn active" data-sub="listaServicios">✂️ Mis Servicios</button>
@@ -178,6 +183,17 @@
             <div id="clientesList" class="clientes-container">Cargando...</div>
         </div>
     </div>
+</div>
+<div id="installBanner" class="install-banner">
+    <div class="install-banner-content">
+        <div class="install-banner-icon">📱</div>
+        <div class="install-banner-text">
+            <div class="install-banner-title">Instalar BarberApp</div>
+            <div class="install-banner-desc">Instala la app para acceso rápido y funcionamiento offline</div>
+        </div>
+    </div>
+    <button id="installBtn">Instalar</button>
+    <button id="closeInstallBtn" style="background:transparent;color:#fff;border:1px solid #fff;padding:8px 16px;">Cerrar</button>
 </div>
 <div id="editBarberoModal" class="modal"><div class="modal-content"><h3>✏️ Editar Barbero</h3><input type="hidden" id="editBarberoId"><div class="form-group"><label>Nombre</label><input type="text" id="editBarberoNombre"></div><div class="form-group"><label>Especialidad</label><input type="text" id="editBarberoEspecialidad"></div><div class="form-group"><label>Teléfono</label><input type="text" id="editBarberoTelefono"></div><div class="form-group"><label>Email</label><input type="email" id="editBarberoEmail" readonly style="background:#f0f0f0;"></div><div class="form-group"><label>Nueva Contraseña (dejar vacío para no cambiar)</label><div class="password-input-group"><input type="password" id="editBarberoPassword" placeholder="Nueva contraseña"><button class="btn-secondary" id="editGenerarPasswordBtn" type="button">🎲 Generar</button></div></div><div class="form-group"><label>URL Imagen</label><input type="text" id="editBarberoImagen"></div><div class="form-group"><label>Experiencia</label><input type="text" id="editBarberoExperiencia"></div><div class="modal-buttons"><button class="btn-secondary" id="closeModalBtn">Cancelar</button><button class="btn-warning" id="resetPasswordBtn">🔄 Restablecer Contraseña</button><button class="btn-primary" id="saveBarberoEditBtn">💾 Guardar Cambios</button></div></div></div>
 <div id="credencialesModal" class="modal"><div class="modal-content"><h3>🔐 Credenciales del Barbero</h3><div id="credencialesInfo"></div><div class="modal-buttons"><button class="btn-primary" id="closeCredencialesBtn">Cerrar</button></div></div></div>
@@ -235,61 +251,73 @@ document.getElementById('closeCredencialesBtn')?.addEventListener('click',()=>{d
 window.addEventListener('click',(e)=>{if(e.target===document.getElementById('editBarberoModal'))document.getElementById('editBarberoModal').style.display='none';if(e.target===document.getElementById('credencialesModal'))document.getElementById('credencialesModal').style.display='none';});
 onAuthStateChanged(auth,async(u)=>{if(u&&!currentUser){const snap=await getDocs(query(collection(db,"usuarios"),where("uid","==",u.uid)));if(!snap.empty){const d=snap.docs[0].data();if(d.rol==="dueño"){currentUser={uid:u.uid,email:u.email,nombre:d.nombre,barberiaId:d.barberiaId};const barSnap=await getDocs(query(collection(db,"barberias"),where("__name__","==",currentUser.barberiaId)));if(!barSnap.empty){barberiaActual={id:barSnap.docs[0].id,...barSnap.docs[0].data()};document.getElementById("userName").innerText=currentUser.nombre;document.getElementById("barberiaInfo").innerHTML=`<strong>🏪 ${barberiaActual.nombre}</strong><br>📍 ${barberiaActual.direccion||''}`;document.getElementById("authScreen").style.display="none";document.getElementById("panelContent").style.display="block";await loadAllData();iniciarEscuchaReservas();}}}}});
 </script>
-<!-- Registro del Service Worker para PWA -->
 <script>
+  // PWA Installation
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
         .then(registration => {
-          console.log('ServiceWorker registrado exitosamente:', registration.scope);
+          console.log('✅ ServiceWorker registrado:', registration.scope);
         })
         .catch(error => {
-          console.log('Error al registrar ServiceWorker:', error);
+          console.log('❌ Error al registrar ServiceWorker:', error);
         });
     });
   }
 
-  // Detectar si la app está instalada como PWA
   let deferredPrompt;
+  const installBanner = document.getElementById('installBanner');
+  const installBtn = document.getElementById('installBtn');
+  const closeInstallBtn = document.getElementById('closeInstallBtn');
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    console.log('📱 La PWA puede ser instalada');
-    
-    // Opcional: Mostrar un botón de instalación
-    const installBtn = document.createElement('button');
-    installBtn.textContent = '📲 Instalar App';
-    installBtn.style.position = 'fixed';
-    installBtn.style.bottom = '20px';
-    installBtn.style.right = '20px';
-    installBtn.style.zIndex = '1000';
-    installBtn.style.background = '#0f172a';
-    installBtn.style.color = 'white';
-    installBtn.style.border = 'none';
-    installBtn.style.borderRadius = '40px';
-    installBtn.style.padding = '12px 20px';
-    installBtn.style.cursor = 'pointer';
-    installBtn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-    
-    installBtn.addEventListener('click', async () => {
-      installBtn.style.display = 'none';
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`Instalación ${outcome}`);
-      deferredPrompt = null;
-    });
-    
-    document.body.appendChild(installBtn);
-    
-    // Ocultar después de 10 segundos si no se usa
-    setTimeout(() => {
-      if (installBtn.parentNode) installBtn.style.opacity = '0';
-      setTimeout(() => {
-        if (installBtn.parentNode) installBtn.remove();
-      }, 500);
-    }, 10000);
+    installBanner.classList.add('show');
+    console.log('📱 PWA lista para instalar');
   });
-</script>
 
+  window.addEventListener('appinstalled', () => {
+    installBanner.classList.remove('show');
+    deferredPrompt = null;
+    console.log('✅ App instalada correctamente');
+    showToast('¡App instalada con éxito!', 'success');
+  });
+
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          console.log('Usuario aceptó la instalación');
+        }
+        deferredPrompt = null;
+        installBanner.classList.remove('show');
+      }
+    });
+  }
+
+  if (closeInstallBtn) {
+    closeInstallBtn.addEventListener('click', () => {
+      installBanner.classList.remove('show');
+    });
+  }
+
+  // Detectar si ya está instalada como PWA
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('App ejecutándose como PWA instalada');
+    const installBannerEl = document.getElementById('installBanner');
+    if (installBannerEl) installBannerEl.style.display = 'none';
+  }
+
+  function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+</script>
 </body>
 </html>
