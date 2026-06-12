@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barberapp-owner-v1.0.0';
+const CACHE_NAME = 'barberapp-owner-v2.0.0';
 const OFFLINE_URL = '/offline.html';
 
 // Recursos a cachear durante la instalación
@@ -16,11 +16,7 @@ const PRECACHE_URLS = [
   '/icons/icon-192.png',
   '/icons/icon-256.png',
   '/icons/icon-384.png',
-  '/icons/icon-512.png',
-  // Firebase CDNs
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js',
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js',
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js'
+  '/icons/icon-512.png'
 ];
 
 // Instalación
@@ -74,11 +70,14 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Para assets estáticos: cache first
+  // Para assets estáticos: cache first (incluye iconos)
   if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp)$/)) {
     event.respondWith(
       caches.match(event.request).then(cached => {
-        return cached || fetch(event.request).then(response => {
+        if (cached) {
+          return cached;
+        }
+        return fetch(event.request).then(response => {
           if (response && response.status === 200) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then(cache => {
@@ -88,7 +87,10 @@ self.addEventListener('fetch', event => {
           return response;
         }).catch(() => {
           // Si es un icono y no hay cache, devolver un placeholder
-          return caches.match('/icons/icon-96.png');
+          if (url.pathname.includes('/icons/')) {
+            return caches.match('/icons/icon-96.png');
+          }
+          return new Response('Icono no disponible', { status: 404 });
         });
       })
     );
@@ -148,6 +150,6 @@ self.addEventListener('sync', event => {
 });
 
 async function syncReservas() {
-  // Aquí puedes implementar lógica de sincronización de reservas offline
   console.log('[ServiceWorker] Sincronizando reservas pendientes...');
+  // Aquí puedes implementar lógica de sincronización de reservas offline
 }
